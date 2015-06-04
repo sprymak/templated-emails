@@ -64,7 +64,7 @@ def send_templated_email(recipients, template_path, context=None,
 class SendThread(threading.Thread):
     def __init__(self, recipient, current_language, current_site, default_context,
                  subject_path, text_path, html_path, from_email=settings.DEFAULT_FROM_EMAIL,
-                 fail_silently=False):
+                 fail_silently=False, extra_headers=None):
         self.recipient = recipient
         self.current_language = current_language
         self.current_site = current_site
@@ -74,6 +74,7 @@ class SendThread(threading.Thread):
         self.html_path = html_path
         self.from_email = from_email
         self.fail_silently = fail_silently
+        self.extra_headers = extra_headers
         super(SendThread, self).__init__()
 
     def run(self):
@@ -100,7 +101,8 @@ class SendThread(threading.Thread):
         subject = "".join(subject.splitlines())  # this must be a single line
         text = render_to_string(self.text_path, context)
 
-        msg = EmailMultiAlternatives(subject, text, self.from_email, [email])
+        msg = EmailMultiAlternatives(
+            subject, text, self.from_email, [email], headers=self.extra_headers)
 
         # try to attach the html variant
         try:
@@ -137,7 +139,7 @@ def _send(recipient_pks, recipient_emails, template_path, context, from_email,
     for recipient in recipients:
         if use_threading:
             SendThread(recipient, current_language, current_site, default_context, subject_path,
-                       text_path, html_path, from_email, fail_silently).start()
+                       text_path, html_path, from_email, fail_silently, extra_headers).start()
             return
         # if it is user, get the email and switch the language
         if isinstance(recipient, get_user_model()):
